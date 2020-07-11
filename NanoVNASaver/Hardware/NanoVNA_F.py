@@ -51,40 +51,51 @@ class NanoVNA_F(NanoVNA):
             rgb_data = struct.unpack(
                 f"<{self.screenwidth * self.screenheight}H", image_data)
             rgb_array = np.array(rgb_data, dtype=np.uint32)
-            rgba_array = (0xFF000000 +
-                            ((rgb_array & 0xF800) << 8) +  # G?!
-                            ((rgb_array & 0x07E0) >> 3) +  # B
-                            ((rgb_array & 0x001F) << 11))  # G
+            if rgb_array[0] == 0xFFFF:
+                rgb_array[0] = 0x0000
+                rgba_array = (0xFF000000 +
+                            ((rgb_array & 0xF800) << 8) +
+                            ((rgb_array & 0x07E0) << 5) +
+                            ((rgb_array & 0x001F) << 3))
+                image = QtGui.QImage(
+                    rgba_array,
+                    self.screenwidth,
+                    self.screenheight,
+                    QtGui.QImage.Format_ARGB32)
+            else:
+                rgba_array = (0xFF000000 +
+                                ((rgb_array & 0xF800) << 8) +  # G?!
+                                ((rgb_array & 0x07E0) >> 3) +  # B
+                                ((rgb_array & 0x001F) << 11))  # G
 
-            unwrapped_array = np.empty(
-                self.screenwidth*self.screenheight,
-                dtype=np.uint32)
-            for y in range(self.screenheight // 2):
-                for x in range(self.screenwidth // 2):
-                    unwrapped_array[
-                        2 * x + 2 * y * self.screenwidth
-                    ] = rgba_array[x + y * self.screenwidth]
-                    unwrapped_array[
-                        (2 * x) + 1 + 2 * y * self.screenwidth
-                    ] = rgba_array[
-                        x + (self.screenheight//2 + y) * self.screenwidth
-                    ]
-                    unwrapped_array[
-                        2 * x + (2 * y + 1) * self.screenwidth
-                    ] = rgba_array[
-                        x + self.screenwidth // 2 + y * self.screenwidth
-                    ]
-                    unwrapped_array[
-                        (2 * x) + 1 + (2 * y + 1) * self.screenwidth
-                    ] = rgba_array[
-                        x + self.screenwidth // 2 +
-                        (self.screenheight//2 + y) * self.screenwidth
-                    ]
-
-            image = QtGui.QImage(
-                unwrapped_array,
-                self.screenwidth, self.screenheight,
-                QtGui.QImage.Format_ARGB32)
+                unwrapped_array = np.empty(
+                    self.screenwidth*self.screenheight,
+                    dtype=np.uint32)
+                for y in range(self.screenheight // 2):
+                    for x in range(self.screenwidth // 2):
+                        unwrapped_array[
+                            2 * x + 2 * y * self.screenwidth
+                        ] = rgba_array[x + y * self.screenwidth]
+                        unwrapped_array[
+                            (2 * x) + 1 + 2 * y * self.screenwidth
+                        ] = rgba_array[
+                            x + (self.screenheight//2 + y) * self.screenwidth
+                        ]
+                        unwrapped_array[
+                            2 * x + (2 * y + 1) * self.screenwidth
+                        ] = rgba_array[
+                            x + self.screenwidth // 2 + y * self.screenwidth
+                        ]
+                        unwrapped_array[
+                            (2 * x) + 1 + (2 * y + 1) * self.screenwidth
+                        ] = rgba_array[
+                            x + self.screenwidth // 2 +
+                            (self.screenheight//2 + y) * self.screenwidth
+                        ]
+                image = QtGui.QImage(
+                    unwrapped_array,
+                    self.screenwidth, self.screenheight,
+                    QtGui.QImage.Format_ARGB32)
             logger.debug("Captured screenshot")
             return QtGui.QPixmap(image)
         except serial.SerialException as exc:
